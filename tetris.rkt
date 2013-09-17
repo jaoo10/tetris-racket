@@ -1,6 +1,7 @@
 #lang racket
 (require htdp/matrix)
 
+
 ;; Você deve implementar as funções neste arquivo. Novas funções podem ser
 ;; criadas, mas todas as funções devem ter testes (no arquivo testes.rkt).
 ;;
