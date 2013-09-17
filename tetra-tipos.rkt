@@ -7,6 +7,7 @@
          S_TIPOS S0 S1 S2 S3
          T_TIPOS T0 T1 T2 T3
          Z_TIPOS Z0 Z1 Z2 Z3)
+         
 
 (define I0 '((0 0 0 0)
              (1 1 1 1)
