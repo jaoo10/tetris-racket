@@ -48,7 +48,8 @@
          varre-linha
          varre-campo
          quadrado
-         pinta-quadrado)
+         pinta-quadrado
+         game-over?)
 
 
 ;; -> Tetris
