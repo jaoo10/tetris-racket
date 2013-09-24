@@ -229,8 +229,8 @@
   (define campo (tetris-campo jogo))
   (define tetra-jogo (tetris-tetra jogo))
   (define lista-jogo (tetramino->lista-pos tetra-jogo))
-  (underlay (varre-campo campo)
-            (desenha-tetra tetra-jogo lista-jogo))
+  (overlay (desenha-tetra tetra-jogo lista-jogo)
+           (varre-campo campo))
   )
 
 
@@ -240,7 +240,7 @@
     [(empty? lista) BLANK]
     [else
      (define cor (tetramino-cor tetra))
-     (place-image (quadrado cor) (* 40 (posn-col (first lista))) (* -40 (posn-lin (first lista))) (desenha-tetra tetra (rest lista)))]))
+     (overlay/xy (quadrado cor) (* -40 (posn-col (first lista))) (* -40 (posn-lin (first lista))) (desenha-tetra tetra (rest lista)))]))
 
 (define (varre-linha linha)
   (cond
