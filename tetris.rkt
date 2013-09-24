@@ -41,7 +41,14 @@
          desce-tudo
          rotaciona
          movimenta?
-         preenche)
+         preenche
+         proximo
+         stream-tetraminos
+         desenha-tetra
+         varre-linha
+         varre-campo
+         quadrado
+         pinta-quadrado)
 
 
 ;; -> Tetris
@@ -149,32 +156,34 @@
               (set! rot-atual (add1 rot-atual)))))
   (define tetra-novo (struct-copy tetramino tetramino-jogo
                                   [rot rot-atual]))
-  
   (cond
     [(not (movimenta? tetra-novo jogo)) jogo]
     [else
      (struct-copy tetris jogo
                      [tetra tetra-novo])]))
           
-      
-
-
+     
 ;; jogo -> jogo
 ;; Move o tetraminó uma posição para baixo
 ;; (define (move-baixo jogo) jogo)
 (define (move-baixo jogo)
-  (define tetramino-jogo (tetris-tetra jogo))
-  (define pos-atual (tetramino-pos tetramino-jogo))
-  (define pos_nova (struct-copy posn pos-atual
-                                [lin (add1 (posn-lin pos-atual))]))
-  (define tetra-novo (struct-copy tetramino tetramino-jogo
-                                  [pos pos_nova]))
   (cond
-    [(not (movimenta? tetra-novo jogo)) jogo]
+    [(empty? jogo) empty]
     [else
-     (struct-copy tetris jogo
-                     [tetra tetra-novo])]))
-
+     (define prox (proximo (limpa (fixa jogo))))
+     (define tetramino-jogo (tetris-tetra jogo))
+     (define pos-atual (tetramino-pos tetramino-jogo))
+     (define pos_nova (struct-copy posn pos-atual
+                                   [lin (add1 (posn-lin pos-atual))]))
+     (define tetra-novo (struct-copy tetramino tetramino-jogo
+                                  [pos pos_nova]))
+     (cond
+       [(movimenta? tetra-novo jogo) (struct-copy tetris jogo
+                                                  [tetra tetra-novo]
+                                                  [timeout TIMEOUT-PADRAO])]
+       [else
+        (struct-copy tetris prox
+                     [timeout TIMEOUT-PADRAO])])]))
 
 
 ;; jogo -> jogo
@@ -187,9 +196,9 @@
      (define novo-jogo (move-baixo jogo))
      (define tetra (tetris-tetra jogo))
      (cond
-       [(equal? (tetris-campo jogo) (tetris-campo novo-jogo)) (desce-tudo novo-jogo)]
+       [(not (equal? (tetris-campo jogo) (tetris-campo novo-jogo))) jogo]
        [else
-        jogo])]))
+        (desce-tudo novo-jogo)])]))
 
 
 
@@ -201,8 +210,15 @@
 ;; (TIMEOUT-PADRAO) de ticks. Se o jogador mover para baixo e fixar o
 ;; tetraminó, a contagem deve reiniciar.
 (define (trata-tick jogo)
-  (printf "t")
-  jogo)
+  (define timeout-jogo (tetris-timeout jogo))
+  (cond
+    [(zero? timeout-jogo) (move-baixo jogo)]
+    [else
+     (struct-copy tetris jogo
+                  [timeout (sub1 timeout-jogo)])]))
+     
+  
+  
 
 ;; Tetris -> Imagem
 ;; Esta função é chamada quando o jogo precisa ser desenhado na tela. Devolve
@@ -210,11 +226,63 @@
 ;; Veja as funções pré-definidas rectangle, beside, above e overlay no pacote
 ;; 2htdp/image.
 (define (desenha jogo)
-  (printf "d")
-  (rectangle (* (tetris-largura jogo) Q-LARGURA)
-             (* (tetris-altura jogo) Q-ALTURA)
-             "solid"
-             "black"))
+  (define campo (tetris-campo jogo))
+  (define tetra-jogo (tetris-tetra jogo))
+  (define lista-jogo (tetramino->lista-pos tetra-jogo))
+  (underlay (varre-campo campo)
+            (desenha-tetra tetra-jogo lista-jogo))
+  )
+
+
+
+(define (desenha-tetra tetra lista)
+  (cond
+    [(empty? lista) BLANK]
+    [else
+     (define cor (tetramino-cor tetra))
+     (place-image (quadrado cor) (* 40 (posn-col (first lista))) (* -40 (posn-lin (first lista))) (desenha-tetra tetra (rest lista)))]))
+
+(define (varre-linha linha)
+  (cond
+    [(empty? linha) BLANK]
+    [else
+     (beside (quadrado (list-ref linha 0))
+             (varre-linha (rest linha)))]))
+
+(define (varre-campo campo)
+  (cond
+    [(empty? campo) BLANK]
+    [else
+     (above (varre-linha (list-ref campo 0))
+            (varre-campo (rest campo)))]))
+
+
+;; Cor -> Quadrado
+;; Desenha o quadrado referente a posição
+;; (define (quadrado cor))
+(define (quadrado cor)
+  (cond
+    [(= cor 1) (pinta-quadrado "cyan" "teal")]
+    [(= cor 2) (pinta-quadrado "blue" "RoyalBlue")]
+    [(= cor 3) (pinta-quadrado "orange" "chocolate")]
+    [(= cor 4) (pinta-quadrado "yellow" "goldenrod")]
+    [(= cor 5) (pinta-quadrado "green" "aquamarine")]
+    [(= cor 6) (pinta-quadrado "purple" "mediumpurple")]
+    [(= cor 7) (pinta-quadrado "red" "tomato")]
+    [else
+     (square 40 "solid" "black")]))
+
+
+;; Cor1 Cor2 -> quadrado
+;; Define as cores e as formas do quadrado
+;; (define (pinta-quadrado cor1 cor2) quadrado)
+(define (pinta-quadrado cor1 cor2)
+  (overlay (overlay (square 25 "outline" "white")
+                    (square 25 "solid" cor1))
+           (add-line (add-line (overlay (square 40 "outline" "white")
+                                        (square 40 "solid" cor2))
+                               0 40 40 0 "white")
+                     40 40 0 0 "white")))
 
 ;; Tetramino -> Lista(Posn)
 ;; Devolve a lista de posições que t ocupa no campo considerando a rotação e a
@@ -376,11 +444,20 @@
          (campo-completas (rest campo))
          (cons (first campo) (campo-completas (rest campo))))]))
 
-
-
 ;; -> Stream(Tetramino)
 ;; Cria um stream randômico de tetraminós.
 ;; Esta função não precisa de testes.
 ;; Você tem que implementar esta função, o corpo incial deve ser descartado.
 (define (stream-tetraminos)
-  (stream-cons T empty-stream))
+  (define num-aleatorio (random 7))
+  (define tetra-aleatorio (list-ref TETRAMINOS num-aleatorio))
+  (stream-cons tetra-aleatorio (stream-tetraminos)))
+
+;; jogo -> jogo
+;; Função que faz com que o próximo tetraminó entre, apos o anterior ser afixado.
+;; (define (proximo jogo) jogo)
+(define (proximo jogo)
+  (define lista-prox (tetris-proximos jogo))
+  (struct-copy tetris jogo
+               [tetra (centraliza (stream-first lista-prox) LARGURA-PADRAO)]
+               [proximos (stream-rest lista-prox)]))
