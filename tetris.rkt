@@ -201,7 +201,14 @@
         (desce-tudo novo-jogo)])]))
 
 
-
+(define (game-over? jogo)
+  (define campo-jogo (tetris-campo jogo))
+  (define proximo (centraliza (stream-first (tetris-proximos jogo)) LARGURA-PADRAO))
+  (define lista-posicoes-proximo (tetramino->lista-pos proximo))
+  (if (lop-livres? lista-posicoes-proximo campo-jogo)
+      false
+      true))
+  
 
 
 ;; Jogo -> Jogo
@@ -229,8 +236,8 @@
   (define campo (tetris-campo jogo))
   (define tetra-jogo (tetris-tetra jogo))
   (define lista-jogo (tetramino->lista-pos tetra-jogo))
-  (overlay (desenha-tetra tetra-jogo lista-jogo)
-           (varre-campo campo))
+  (overlay/align "left" "top" (desenha-tetra tetra-jogo lista-jogo)
+                  (varre-campo campo))
   )
 
 
@@ -240,7 +247,7 @@
     [(empty? lista) BLANK]
     [else
      (define cor (tetramino-cor tetra))
-     (overlay/xy (quadrado cor) (* -40 (posn-col (first lista))) (* -40 (posn-lin (first lista))) (desenha-tetra tetra (rest lista)))]))
+     (overlay/xy (quadrado cor) (* -40 (posn-col (first lista))) (*  (posn-lin (first lista)) -40) (desenha-tetra tetra (rest lista)))]))
 
 (define (varre-linha linha)
   (cond
@@ -379,14 +386,17 @@
 ;; jogo, ou seja, sobreescreve o jogo com o novo tetraminó.
 ;; Requer que tetraminó não possa ser movido para baixo.
 (define (fixa jogo)
-  (define tetramin (tetris-tetra jogo))
-  (define cor (tetramino-cor tetramin))
-  (define campo (tetris-campo jogo))
-  (define lista-pos (tetramino->lista-pos tetramin))
-  (if (empty? jogo)
-      empty
-      (struct-copy tetris jogo
-                   [campo (preenche lista-pos campo cor)])))
+  (cond
+    [(game-over? jogo) (make-tetris-padrao)]
+    [else
+     (define tetramin (tetris-tetra jogo))
+     (define cor (tetramino-cor tetramin))
+     (define campo (tetris-campo jogo))
+     (define lista-pos (tetramino->lista-pos tetramin))
+     (if (empty? jogo)
+         empty
+         (struct-copy tetris jogo
+                      [campo (preenche lista-pos campo cor)]))]))
       
 
 ;; Lista(posn) campo cor -> campo
